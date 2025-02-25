@@ -11,8 +11,8 @@ const userSchema = new mongoose.Schema({
     type: String,
     default: uuidv4,
     unique: true,
-  }, // Unique funding link ID
-  apiKey: { type: String, default: uuidv4, unique: true }, // Unique API key
+  },
+  apiKey: { type: String, default: uuidv4, unique: true },
   createdAt: { type: Date, default: Date.now },
 })
 

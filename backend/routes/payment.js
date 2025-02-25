@@ -42,12 +42,10 @@ router.post('/initialize', auth, async (req, res) => {
       'Payment initialization error:',
       error.message
     )
-    res
-      .status(500)
-      .json({
-        error: 'Payment initialization failed',
-        details: error.message,
-      })
+    res.status(500).json({
+      error: 'Payment initialization failed',
+      details: error.message,
+    })
   }
 })
 
@@ -81,11 +79,9 @@ router.get('/verify/:reference', auth, async (req, res) => {
       await wallet.save()
       res.json({ message: 'Payment verified', wallet })
     } else {
-      res
-        .status(400)
-        .json({
-          error: 'Payment not successful or unauthorized',
-        })
+      res.status(400).json({
+        error: 'Payment not successful or unauthorized',
+      })
     }
   } catch (error) {
     console.error('Payment verification error:', error)
@@ -155,12 +151,10 @@ router.post(
       })
     } catch (error) {
       console.error('Funding link error:', error.message)
-      res
-        .status(500)
-        .json({
-          error: 'Funding failed',
-          details: error.message,
-        })
+      res.status(500).json({
+        error: 'Funding failed',
+        details: error.message,
+      })
     }
   }
 )
@@ -204,12 +198,10 @@ router.post('/fund/api', async (req, res) => {
     })
   } catch (error) {
     console.error('API funding error:', error.message)
-    res
-      .status(500)
-      .json({
-        error: 'Funding failed',
-        details: error.message,
-      })
+    res.status(500).json({
+      error: 'Funding failed',
+      details: error.message,
+    })
   }
 })
 
@@ -293,13 +285,11 @@ router.post('/payout', auth, async (req, res) => {
       'Payout error:',
       error.response?.data || error.message
     )
-    res
-      .status(500)
-      .json({
-        error: 'Payout failed',
-        details:
-          error.response?.data?.message || error.message,
-      })
+    res.status(500).json({
+      error: 'Payout failed',
+      details:
+        error.response?.data?.message || error.message,
+    })
   }
 })
 

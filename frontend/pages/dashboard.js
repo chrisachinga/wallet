@@ -13,31 +13,49 @@ import {
 
 export default function Dashboard() {
   const [wallet, setWallet] = useState(null)
+  const [userData, setUserData] = useState(null)
   const router = useRouter()
 
   useEffect(() => {
-    const fetchWallet = async () => {
+    const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token');
-        if (!token) throw new Error('Not authenticated');
-        const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`, {
-          headers: { 'x-auth-token': token },
-        });
-        setWallet(response.data);
+        const token = localStorage.getItem('token')
+        if (!token) throw new Error('Not authenticated')
+
+        const [walletRes, userRes] = await Promise.all([
+          axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`,
+            {
+              headers: { 'x-auth-token': token },
+            }
+          ),
+          axios.get(
+            `${process.env.NEXT_PUBLIC_API_URL}/api/auth/user`,
+            {
+              // Assuming an endpoint to get user data
+              headers: { 'x-auth-token': token },
+            }
+          ),
+        ])
+
+        setWallet(walletRes.data)
+        setUserData(userRes.data)
       } catch (error) {
-        console.error('Error fetching wallet:', error);
-        router.push('/login');
+        console.error('Error fetching data:', error)
+        router.push('/login')
       }
-    };
-    fetchWallet();
-  }, [router]);
+    }
+    fetchData()
+  }, [router])
 
   const handleLogout = () => {
     localStorage.removeItem('token')
     router.push('/login')
   }
 
-  if (!wallet) return <div>Loading...</div>
+  if (!wallet || !userData) return <div>Loading...</div>
+
+  const fundingLink = `http://localhost:3000/fund/${userData.fundingLinkId}`
 
   return (
     <div style={{ padding: '20px' }}>
@@ -61,6 +79,18 @@ export default function Dashboard() {
       >
         Logout
       </Button>
+
+      <Typography
+        variant='h6'
+        style={{ marginTop: '20px' }}
+      >
+        Your Funding Details
+      </Typography>
+      <Typography>
+        Funding Link:{' '}
+        <a href={fundingLink}>{fundingLink}</a>
+      </Typography>
+      <Typography>API Key: {userData.apiKey}</Typography>
 
       <Typography
         variant='h6'

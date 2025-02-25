@@ -1,103 +1,124 @@
-import { useEffect, useState } from 'react'
-import { useRouter } from 'next/router'
-import axios from 'axios'
-import {
-  Button,
-  Typography,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-} from '@mui/material'
+import { useEffect, useState } from 'react';
+import { useRouter } from 'next/router';
+import axios from 'axios';
+import { Button, Typography, Table, TableBody, TableCell, TableHead, TableRow, TextField, Box } from '@mui/material';
 
 export default function Dashboard() {
-  const [wallet, setWallet] = useState(null)
-  const [userData, setUserData] = useState(null)
-  const router = useRouter()
+  const [wallet, setWallet] = useState(null);
+  const [userData, setUserData] = useState(null);
+  const [payoutAmount, setPayoutAmount] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [payoutError, setPayoutError] = useState('');
+  const router = useRouter();
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const token = localStorage.getItem('token')
-        if (!token) throw new Error('Not authenticated')
+        const token = localStorage.getItem('token');
+        if (!token) throw new Error('Not authenticated');
 
         const [walletRes, userRes] = await Promise.all([
-          axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`,
-            {
-              headers: { 'x-auth-token': token },
-            }
-          ),
-          axios.get(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/auth/user`,
-            {
-              // Assuming an endpoint to get user data
-              headers: { 'x-auth-token': token },
-            }
-          ),
-        ])
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`, {
+            headers: { 'x-auth-token': token },
+          }),
+          axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/user`, {
+            headers: { 'x-auth-token': token },
+          }),
+        ]);
 
-        setWallet(walletRes.data)
-        setUserData(userRes.data)
+        setWallet(walletRes.data);
+        setUserData(userRes.data);
       } catch (error) {
-        console.error('Error fetching data:', error)
-        router.push('/login')
+        console.error('Error fetching data:', error);
+        router.push('/login');
       }
-    }
-    fetchData()
-  }, [router])
+    };
+    fetchData();
+  }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    router.push('/login')
-  }
+    localStorage.removeItem('token');
+    router.push('/login');
+  };
 
-  if (!wallet || !userData) return <div>Loading...</div>
+  const handlePayout = async () => {
+    try {
+      setPayoutError('');
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/payment/payout`,
+        { amount: payoutAmount, phoneNumber },
+        { headers: { 'x-auth-token': token } }
+      );
+      console.log('Payout response:', response.data);
+      setPayoutAmount('');
+      setPhoneNumber('');
+      // Refresh wallet data
+      const walletRes = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`, {
+        headers: { 'x-auth-token': token },
+      });
+      setWallet(walletRes.data);
+    } catch (error) {
+      console.error('Payout error:', error.response?.data || error.message);
+      setPayoutError(error.response?.data?.error || 'Payout failed');
+    }
+  };
 
-  const fundingLink = `http://localhost:3000/fund/${userData.fundingLinkId}`
+  if (!wallet || !userData) return <div>Loading...</div>;
+
+  const fundingLink = userData.fundingLinkId
+    ? `http://localhost:3000/fund/${userData.fundingLinkId}`
+    : 'Funding link not generated yet';
 
   return (
     <div style={{ padding: '20px' }}>
-      <Typography variant='h4'>Dashboard</Typography>
-      <Typography>
-        Welcome, {wallet.user.username}
-      </Typography>
+      <Typography variant="h4">Dashboard</Typography>
+      <Typography>Welcome, {wallet.user.username}</Typography>
       <Typography>Balance: KES {wallet.balance}</Typography>
-      <Button
-        variant='contained'
-        color='primary'
-        onClick={() => router.push('/')}
-        style={{ margin: '10px 0' }}
-      >
+      <Button variant="contained" color="primary" onClick={() => router.push('/')} style={{ margin: '10px 0' }}>
         Fund Wallet
       </Button>
-      <Button
-        variant='outlined'
-        color='secondary'
-        onClick={handleLogout}
-      >
+      <Button variant="outlined" color="secondary" onClick={handleLogout} style={{ marginLeft: '10px' }}>
         Logout
       </Button>
 
-      <Typography
-        variant='h6'
-        style={{ marginTop: '20px' }}
-      >
-        Your Funding Details
-      </Typography>
-      <Typography>
-        Funding Link:{' '}
-        <a href={fundingLink}>{fundingLink}</a>
-      </Typography>
-      <Typography>API Key: {userData.apiKey}</Typography>
+      <Box mt={4}>
+        <Typography variant="h6">Payout Funds to M-Pesa</Typography>
+        <TextField
+          type="number"
+          label="Amount (KES)"
+          value={payoutAmount}
+          onChange={(e) => setPayoutAmount(e.target.value)}
+          fullWidth
+          margin="normal"
+        />
+        <TextField
+          type="text"
+          label="M-Pesa Phone Number (e.g., +254700123456)"
+          value={phoneNumber}
+          onChange={(e) => setPhoneNumber(e.target.value)}
+          fullWidth
+          margin="normal"
+        />
+        <Button
+          variant="contained"
+          color="secondary"
+          onClick={handlePayout}
+          disabled={!payoutAmount || !phoneNumber || wallet.balance <= 0}
+          style={{ marginTop: '10px' }}
+        >
+          Payout to M-Pesa
+        </Button>
+        {payoutError && <Typography color="error" style={{ marginTop: '10px' }}>{payoutError}</Typography>}
+      </Box>
 
-      <Typography
-        variant='h6'
-        style={{ marginTop: '20px' }}
-      >
-        Transaction History
+      <Typography variant="h6" style={{ marginTop: '20px' }}>Your Funding Details</Typography>
+      <Typography>
+        Funding Link: {userData.fundingLinkId ? <a href={fundingLink}>{fundingLink}</a> : fundingLink}
       </Typography>
+      <Typography>API Key: {userData.apiKey || 'Not available'}</Typography>
+
+      <Typography variant="h6" style={{ marginTop: '20px' }}>Transaction History</Typography>
       <Table>
         <TableHead>
           <TableRow>
@@ -113,13 +134,11 @@ export default function Dashboard() {
               <TableCell>{tx.type}</TableCell>
               <TableCell>{tx.amount}</TableCell>
               <TableCell>{tx.reference}</TableCell>
-              <TableCell>
-                {new Date(tx.date).toLocaleString()}
-              </TableCell>
+              <TableCell>{new Date(tx.date).toLocaleString()}</TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
     </div>
-  )
+  );
 }

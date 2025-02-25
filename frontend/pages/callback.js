@@ -14,19 +14,21 @@ export default function Callback() {
 
   const verifyPayment = async (ref) => {
     try {
-      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/verify/${ref}`);
+      const token = localStorage.getItem('token');
+      const response = await axios.get(`${process.env.NEXT_PUBLIC_API_URL}/api/payment/verify/${ref}`, {
+        headers: { 'x-auth-token': token },
+      });
       const { wallet } = response.data;
-      const amount = wallet.transactions[wallet.transactions.length - 1].amount; // Last transaction amount
+      const amount = wallet.transactions[wallet.transactions.length - 1].amount;
       const balance = wallet.balance;
 
-      // Redirect to success page with query params
       router.push({
         pathname: '/success',
         query: { amount, balance },
       });
     } catch (error) {
       console.error('Verification error:', error);
-      router.push('/'); // Redirect to home on failure
+      router.push('/');
     }
   };
 

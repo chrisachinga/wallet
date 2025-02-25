@@ -2,6 +2,7 @@ const express = require('express')
 const router = express.Router()
 const axios = require('axios')
 const PDFDocument = require('pdfkit')
+const crypto = require('crypto')
 const Wallet = require('../models/Wallet')
 const User = require('../models/User')
 const auth = require('../middleware/auth')
@@ -23,7 +24,7 @@ router.post('/initialize', auth, async (req, res) => {
         amount: amount * 100,
         email,
         currency: 'KES',
-        callback_url: 'http://localhost:3000/callback',
+        callback_url: 'http://localhost:3000/callback', // Update to frontend URL in prod
         metadata: { userId },
       },
       {
@@ -456,6 +457,56 @@ router.get('/statement', auth, async (req, res) => {
         details: error.message,
       })
   }
+})
+
+// New webhook endpoint
+router.post('/webhook', async (req, res) => {
+  const sig = req.headers['x-paystack-signature']
+  const secret = process.env.PAYSTACK_SECRET_KEY
+  const payload = JSON.stringify(req.body)
+
+  const hash = crypto
+    .createHmac('sha512', secret)
+    .update(payload)
+    .digest('hex')
+  if (hash !== sig) {
+    console.error('Invalid webhook signature')
+    return res
+      .status(400)
+      .json({ error: 'Invalid signature' })
+  }
+
+  const event = req.body
+  if (event.event === 'charge.success') {
+    const { reference, amount, metadata } = event.data
+    try {
+      const wallet = await Wallet.findOne({
+        user: metadata.userId,
+      })
+      if (
+        wallet &&
+        !wallet.transactions.some(
+          (tx) => tx.reference === reference
+        )
+      ) {
+        wallet.balance += amount / 100
+        wallet.transactions.push({
+          type: 'credit',
+          amount: amount / 100,
+          reference,
+          date: new Date(),
+        })
+        await wallet.save()
+        console.log(
+          `Webhook: Updated wallet for user ${metadata.userId} with transaction ${reference}`
+        )
+      }
+    } catch (error) {
+      console.error('Webhook error:', error.message)
+    }
+  }
+
+  res.status(200).end()
 })
 
 module.exports = router

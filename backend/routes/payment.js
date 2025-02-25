@@ -1,6 +1,7 @@
 const express = require('express')
 const router = express.Router()
 const axios = require('axios')
+const PDFDocument = require('pdfkit')
 const Wallet = require('../models/Wallet')
 const User = require('../models/User')
 const auth = require('../middleware/auth')
@@ -42,10 +43,12 @@ router.post('/initialize', auth, async (req, res) => {
       'Payment initialization error:',
       error.message
     )
-    res.status(500).json({
-      error: 'Payment initialization failed',
-      details: error.message,
-    })
+    res
+      .status(500)
+      .json({
+        error: 'Payment initialization failed',
+        details: error.message,
+      })
   }
 })
 
@@ -69,19 +72,50 @@ router.get('/verify/:reference', auth, async (req, res) => {
       status === 'success' &&
       metadata.userId === userId
     ) {
-      const wallet = await Wallet.findOne({ user: userId })
+      const wallet = await Wallet.findOne({
+        user: userId,
+      }).populate('user', 'username')
       wallet.balance += amount / 100
       wallet.transactions.push({
         type: 'credit',
         amount: amount / 100,
         reference,
+        date: new Date(),
       })
       await wallet.save()
-      res.json({ message: 'Payment verified', wallet })
-    } else {
-      res.status(400).json({
-        error: 'Payment not successful or unauthorized',
+
+      // Generate receipt
+      const doc = new PDFDocument()
+      let buffers = []
+      doc.on('data', buffers.push.bind(buffers))
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers)
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=receipt_${reference}.pdf`
+        )
+        res.send(pdfData)
       })
+
+      doc
+        .fontSize(20)
+        .text('Payment Receipt', { align: 'center' })
+      doc.moveDown()
+      doc
+        .fontSize(12)
+        .text(`Username: ${wallet.user.username}`)
+      doc.text(`Transaction Type: Credit`)
+      doc.text(`Amount: KES ${amount / 100}`)
+      doc.text(`Reference: ${reference}`)
+      doc.text(`Date: ${new Date().toLocaleString()}`)
+      doc.end()
+    } else {
+      res
+        .status(400)
+        .json({
+          error: 'Payment not successful or unauthorized',
+        })
     }
   } catch (error) {
     console.error('Payment verification error:', error)
@@ -151,10 +185,12 @@ router.post(
       })
     } catch (error) {
       console.error('Funding link error:', error.message)
-      res.status(500).json({
-        error: 'Funding failed',
-        details: error.message,
-      })
+      res
+        .status(500)
+        .json({
+          error: 'Funding failed',
+          details: error.message,
+        })
     }
   }
 )
@@ -198,10 +234,12 @@ router.post('/fund/api', async (req, res) => {
     })
   } catch (error) {
     console.error('API funding error:', error.message)
-    res.status(500).json({
-      error: 'Funding failed',
-      details: error.message,
-    })
+    res
+      .status(500)
+      .json({
+        error: 'Funding failed',
+        details: error.message,
+      })
   }
 })
 
@@ -210,7 +248,9 @@ router.post('/payout', auth, async (req, res) => {
   const userId = req.user.id
 
   try {
-    const wallet = await Wallet.findOne({ user: userId })
+    const wallet = await Wallet.findOne({
+      user: userId,
+    }).populate('user', 'username')
     if (!wallet)
       return res
         .status(404)
@@ -237,8 +277,8 @@ router.post('/payout', auth, async (req, res) => {
       {
         type: 'mobile_money',
         name: 'User Payout',
-        account_number: phoneNumber, // e.g., +254712345678
-        bank_code: 'MPESA', // As per docs for individual M-Pesa users
+        account_number: phoneNumber,
+        bank_code: 'MPESA',
         currency: 'KES',
       },
       {
@@ -248,7 +288,6 @@ router.post('/payout', auth, async (req, res) => {
         },
       }
     )
-    console.log('Recipient created:', recipientRes.data)
 
     console.log('Initiating transfer')
     const transferRes = await axios.post(
@@ -266,30 +305,119 @@ router.post('/payout', auth, async (req, res) => {
         },
       }
     )
-    console.log('Transfer initiated:', transferRes.data)
 
     wallet.balance -= payoutAmount
+    const reference = transferRes.data.data.reference
     wallet.transactions.push({
       type: 'debit',
       amount: payoutAmount,
-      reference: transferRes.data.data.reference,
+      reference,
+      date: new Date(),
     })
     await wallet.save()
 
-    res.json({
-      message: 'Payout to M-Pesa initiated',
-      transfer: transferRes.data.data,
+    // Generate receipt for payout
+    const doc = new PDFDocument()
+    let buffers = []
+    doc.on('data', buffers.push.bind(buffers))
+    doc.on('end', () => {
+      const pdfData = Buffer.concat(buffers)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=receipt_${reference}.pdf`
+      )
+      res.send(pdfData)
     })
+
+    doc
+      .fontSize(20)
+      .text('Payout Receipt', { align: 'center' })
+    doc.moveDown()
+    doc
+      .fontSize(12)
+      .text(`Username: ${wallet.user.username}`)
+    doc.text(`Transaction Type: Debit (Payout)`)
+    doc.text(`Amount: KES ${payoutAmount}`)
+    doc.text(`Phone Number: ${phoneNumber}`)
+    doc.text(`Reference: ${reference}`)
+    doc.text(`Date: ${new Date().toLocaleString()}`)
+    doc.end()
   } catch (error) {
     console.error(
       'Payout error:',
       error.response?.data || error.message
     )
-    res.status(500).json({
-      error: 'Payout failed',
-      details:
-        error.response?.data?.message || error.message,
+    res
+      .status(500)
+      .json({
+        error: 'Payout failed',
+        details:
+          error.response?.data?.message || error.message,
+      })
+  }
+})
+
+// New endpoint for generating wallet statement
+router.get('/statement', auth, async (req, res) => {
+  const userId = req.user.id
+
+  try {
+    const wallet = await Wallet.findOne({
+      user: userId,
+    }).populate('user', 'username')
+    if (!wallet)
+      return res
+        .status(404)
+        .json({ error: 'Wallet not found' })
+
+    const doc = new PDFDocument()
+    let buffers = []
+    doc.on('data', buffers.push.bind(buffers))
+    doc.on('end', () => {
+      const pdfData = Buffer.concat(buffers)
+      res.setHeader('Content-Type', 'application/pdf')
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename=statement_${userId}_${Date.now()}.pdf`
+      )
+      res.send(pdfData)
     })
+
+    doc
+      .fontSize(20)
+      .text('Wallet Statement', { align: 'center' })
+    doc.moveDown()
+    doc
+      .fontSize(12)
+      .text(`Username: ${wallet.user.username}`)
+    doc.text(`Current Balance: KES ${wallet.balance}`)
+    doc.text(`Generated On: ${new Date().toLocaleString()}`)
+    doc.moveDown()
+
+    doc.text('Transaction History:', { underline: true })
+    wallet.transactions.forEach((tx, index) => {
+      doc.moveDown(0.5)
+      doc.text(`${index + 1}. Type: ${tx.type}`)
+      doc.text(`   Amount: KES ${tx.amount}`)
+      doc.text(`   Reference: ${tx.reference}`)
+      doc.text(
+        `   Date: ${new Date(tx.date).toLocaleString()}`
+      )
+    })
+
+    doc.end()
+  } catch (error) {
+    console.error(
+      'Statement generation error:',
+      error.message
+    )
+    res
+      .status(500)
+      .json({
+        error: 'Statement generation failed',
+        details: error.message,
+      })
   }
 })
 

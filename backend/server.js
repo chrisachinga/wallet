@@ -7,21 +7,34 @@ const authRoutes = require('./routes/auth')
 
 const app = express()
 
+// Use FRONTEND_URL from environment variables, fallback to localhost:3000 for local dev
+const FRONTEND_URL =
+  process.env.FRONTEND_URL || 'http://localhost:3000'
+
 // CORS configuration
 const corsOptions = {
-  origin: 'http://localhost:3000', // Frontend origin in dev; update for production
+  origin: FRONTEND_URL, // Dynamic origin from env var
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'x-auth-token'],
+  allowedHeaders: [
+    'Content-Type',
+    'x-auth-token',
+    'x-paystack-signature',
+  ],
   credentials: true,
   optionsSuccessStatus: 200,
 }
 app.use(cors(corsOptions))
 app.options('*', cors(corsOptions))
 
+// Parse raw body for webhook
+app.use(
+  '/api/payment/webhook',
+  express.raw({ type: 'application/json' })
+)
 app.use(express.json())
+
 connectDB()
 
-// Simple health check endpoint to test server status
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     status: 'success',
@@ -33,7 +46,6 @@ app.get('/api/health', (req, res) => {
 app.use('/api/payment', paymentRoutes)
 app.use('/api/auth', authRoutes)
 
-// Use Render's assigned port or fallback to 5000 for local dev
 const PORT = process.env.PORT || 5000
 app.listen(PORT, () =>
   console.log(`Server running on port ${PORT}`)

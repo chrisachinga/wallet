@@ -84,32 +84,7 @@ router.get('/verify/:reference', auth, async (req, res) => {
       })
       await wallet.save()
 
-      // Generate receipt
-      const doc = new PDFDocument()
-      let buffers = []
-      doc.on('data', buffers.push.bind(buffers))
-      doc.on('end', () => {
-        const pdfData = Buffer.concat(buffers)
-        res.setHeader('Content-Type', 'application/pdf')
-        res.setHeader(
-          'Content-Disposition',
-          `attachment; filename=receipt_${reference}.pdf`
-        )
-        res.send(pdfData)
-      })
-
-      doc
-        .fontSize(20)
-        .text('Payment Receipt', { align: 'center' })
-      doc.moveDown()
-      doc
-        .fontSize(12)
-        .text(`Username: ${wallet.user.username}`)
-      doc.text(`Transaction Type: Credit`)
-      doc.text(`Amount: KES ${amount / 100}`)
-      doc.text(`Reference: ${reference}`)
-      doc.text(`Date: ${new Date().toLocaleString()}`)
-      doc.end()
+      res.json({ message: 'Payment verified', wallet })
     } else {
       res
         .status(400)
@@ -316,33 +291,11 @@ router.post('/payout', auth, async (req, res) => {
     })
     await wallet.save()
 
-    // Generate receipt for payout
-    const doc = new PDFDocument()
-    let buffers = []
-    doc.on('data', buffers.push.bind(buffers))
-    doc.on('end', () => {
-      const pdfData = Buffer.concat(buffers)
-      res.setHeader('Content-Type', 'application/pdf')
-      res.setHeader(
-        'Content-Disposition',
-        `attachment; filename=receipt_${reference}.pdf`
-      )
-      res.send(pdfData)
+    res.json({
+      message: 'Payout to M-Pesa initiated',
+      transfer: transferRes.data.data,
+      reference,
     })
-
-    doc
-      .fontSize(20)
-      .text('Payout Receipt', { align: 'center' })
-    doc.moveDown()
-    doc
-      .fontSize(12)
-      .text(`Username: ${wallet.user.username}`)
-    doc.text(`Transaction Type: Debit (Payout)`)
-    doc.text(`Amount: KES ${payoutAmount}`)
-    doc.text(`Phone Number: ${phoneNumber}`)
-    doc.text(`Reference: ${reference}`)
-    doc.text(`Date: ${new Date().toLocaleString()}`)
-    doc.end()
   } catch (error) {
     console.error(
       'Payout error:',
@@ -358,7 +311,91 @@ router.post('/payout', auth, async (req, res) => {
   }
 })
 
-// New endpoint for generating wallet statement
+router.get(
+  '/receipt/:reference',
+  auth,
+  async (req, res) => {
+    const { reference } = req.params
+    const userId = req.user.id
+
+    try {
+      const wallet = await Wallet.findOne({
+        user: userId,
+      }).populate('user', 'username')
+      if (!wallet)
+        return res
+          .status(404)
+          .json({ error: 'Wallet not found' })
+
+      const transaction = wallet.transactions.find(
+        (tx) => tx.reference === reference
+      )
+      if (!transaction)
+        return res
+          .status(404)
+          .json({ error: 'Transaction not found' })
+
+      const doc = new PDFDocument()
+      let buffers = []
+      doc.on('data', buffers.push.bind(buffers))
+      doc.on('end', () => {
+        const pdfData = Buffer.concat(buffers)
+        res.setHeader('Content-Type', 'application/pdf')
+        res.setHeader(
+          'Content-Disposition',
+          `attachment; filename=receipt_${reference}.pdf`
+        )
+        res.send(pdfData)
+      })
+
+      doc
+        .fontSize(20)
+        .text(
+          `${
+            transaction.type === 'credit'
+              ? 'Payment'
+              : 'Payout'
+          } Receipt`,
+          { align: 'center' }
+        )
+      doc.moveDown()
+      doc
+        .fontSize(12)
+        .text(`Username: ${wallet.user.username}`)
+      doc.text(
+        `Transaction Type: ${
+          transaction.type === 'credit'
+            ? 'Credit'
+            : 'Debit (Payout)'
+        }`
+      )
+      doc.text(`Amount: KES ${transaction.amount}`)
+      if (transaction.type === 'debit')
+        doc.text(
+          `Phone Number: ${req.body.phoneNumber || 'N/A'}`
+        )
+      doc.text(`Reference: ${reference}`)
+      doc.text(
+        `Date: ${new Date(
+          transaction.date
+        ).toLocaleString()}`
+      )
+      doc.end()
+    } catch (error) {
+      console.error(
+        'Receipt generation error:',
+        error.message
+      )
+      res
+        .status(500)
+        .json({
+          error: 'Receipt generation failed',
+          details: error.message,
+        })
+    }
+  }
+)
+
 router.get('/statement', auth, async (req, res) => {
   const userId = req.user.id
 
@@ -379,7 +416,7 @@ router.get('/statement', auth, async (req, res) => {
       res.setHeader('Content-Type', 'application/pdf')
       res.setHeader(
         'Content-Disposition',
-        `attachment; filename=statement_${userId}_${Date.now()}.pdf`
+        'inline; filename=statement.pdf'
       )
       res.send(pdfData)
     })

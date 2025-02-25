@@ -11,6 +11,7 @@ import {
   TableRow,
   TextField,
   Box,
+  Modal,
 } from '@mui/material'
 
 export default function Dashboard() {
@@ -19,6 +20,10 @@ export default function Dashboard() {
   const [payoutAmount, setPayoutAmount] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
   const [payoutError, setPayoutError] = useState('')
+  const [statementUrl, setStatementUrl] = useState(null)
+  const [receiptUrl, setReceiptUrl] = useState(null) // For receipt preview
+  const [openReceiptModal, setOpenReceiptModal] =
+    useState(false) // Modal state
   const router = useRouter()
 
   useEffect(() => {
@@ -64,31 +69,11 @@ export default function Dashboard() {
       const response = await axios.post(
         `${process.env.NEXT_PUBLIC_API_URL}/api/payment/payout`,
         { amount: payoutAmount, phoneNumber },
-        {
-          headers: { 'x-auth-token': token },
-          responseType: 'blob', // For PDF download
-        }
+        { headers: { 'x-auth-token': token } }
       )
-
-      // Download payout receipt
-      const url = window.URL.createObjectURL(
-        new Blob([response.data], {
-          type: 'application/pdf',
-        })
-      )
-      const link = document.createElement('a')
-      link.href = url
-      link.setAttribute(
-        'download',
-        `receipt_${Date.now()}.pdf`
-      )
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
 
       setPayoutAmount('')
       setPhoneNumber('')
-      // Refresh wallet data
       const walletRes = await axios.get(
         `${process.env.NEXT_PUBLIC_API_URL}/api/payment/wallet`,
         {
@@ -114,18 +99,25 @@ export default function Dashboard() {
         `${process.env.NEXT_PUBLIC_API_URL}/api/payment/statement`,
         {
           headers: { 'x-auth-token': token },
-          responseType: 'blob', // For PDF download
+          responseType: 'blob',
         }
       )
 
-      // Download statement
       const url = window.URL.createObjectURL(
         new Blob([response.data], {
           type: 'application/pdf',
         })
       )
+      setStatementUrl(url)
+    } catch (error) {
+      console.error('Statement generation error:', error)
+    }
+  }
+
+  const handleDownloadStatement = () => {
+    if (statementUrl) {
       const link = document.createElement('a')
-      link.href = url
+      link.href = statementUrl
       link.setAttribute(
         'download',
         `statement_${Date.now()}.pdf`
@@ -133,9 +125,49 @@ export default function Dashboard() {
       document.body.appendChild(link)
       link.click()
       link.remove()
-    } catch (error) {
-      console.error('Statement generation error:', error)
     }
+  }
+
+  const handleGenerateReceipt = async (reference) => {
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(
+        `${process.env.NEXT_PUBLIC_API_URL}/api/payment/receipt/${reference}`,
+        {
+          headers: { 'x-auth-token': token },
+          responseType: 'blob',
+        }
+      )
+
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], {
+          type: 'application/pdf',
+        })
+      )
+      setReceiptUrl(url)
+      setOpenReceiptModal(true) // Open modal
+    } catch (error) {
+      console.error('Receipt generation error:', error)
+    }
+  }
+
+  const handleDownloadReceipt = () => {
+    if (receiptUrl) {
+      const link = document.createElement('a')
+      link.href = receiptUrl
+      link.setAttribute(
+        'download',
+        `receipt_${Date.now()}.pdf`
+      )
+      document.body.appendChild(link)
+      link.click()
+      link.remove()
+    }
+  }
+
+  const handleCloseReceiptModal = () => {
+    setOpenReceiptModal(false)
+    setReceiptUrl(null) // Clear receipt URL when closing
   }
 
   if (!wallet || !userData) return <div>Loading...</div>
@@ -219,6 +251,25 @@ export default function Dashboard() {
         >
           Generate Statement
         </Button>
+        {statementUrl && (
+          <Box mt={2}>
+            <Typography>Statement Preview:</Typography>
+            <iframe
+              src={statementUrl}
+              width='100%'
+              height='500px'
+              style={{ border: '1px solid #ccc' }}
+            />
+            <Button
+              variant='outlined'
+              color='primary'
+              onClick={handleDownloadStatement}
+              style={{ marginTop: '10px' }}
+            >
+              Download Statement
+            </Button>
+          </Box>
+        )}
       </Box>
 
       <Typography
@@ -252,6 +303,7 @@ export default function Dashboard() {
             <TableCell>Amount (KES)</TableCell>
             <TableCell>Reference</TableCell>
             <TableCell>Date</TableCell>
+            <TableCell>Action</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
@@ -263,10 +315,83 @@ export default function Dashboard() {
               <TableCell>
                 {new Date(tx.date).toLocaleString()}
               </TableCell>
+              <TableCell>
+                <Button
+                  variant='outlined'
+                  color='primary'
+                  size='small'
+                  onClick={() =>
+                    handleGenerateReceipt(tx.reference)
+                  }
+                >
+                  Generate Receipt
+                </Button>
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
+
+      {/* Receipt Preview Modal */}
+      <Modal
+        open={openReceiptModal}
+        onClose={handleCloseReceiptModal}
+        aria-labelledby='receipt-modal-title'
+        aria-describedby='receipt-modal-description'
+      >
+        <Box
+          sx={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            width: '80%',
+            maxWidth: 800,
+            bgcolor: 'background.paper',
+            boxShadow: 24,
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <Typography
+            id='receipt-modal-title'
+            variant='h6'
+            component='h2'
+          >
+            Receipt Preview
+          </Typography>
+          {receiptUrl && (
+            <Box mt={2}>
+              <iframe
+                src={receiptUrl}
+                width='100%'
+                height='400px'
+                style={{ border: '1px solid #ccc' }}
+              />
+              <Box
+                mt={2}
+                display='flex'
+                justifyContent='space-between'
+              >
+                <Button
+                  variant='contained'
+                  color='primary'
+                  onClick={handleDownloadReceipt}
+                >
+                  Download
+                </Button>
+                <Button
+                  variant='outlined'
+                  color='secondary'
+                  onClick={handleCloseReceiptModal}
+                >
+                  Close
+                </Button>
+              </Box>
+            </Box>
+          )}
+        </Box>
+      </Modal>
     </div>
   )
 }

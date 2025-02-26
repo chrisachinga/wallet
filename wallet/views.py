@@ -1,3 +1,4 @@
+# wallet/views.py
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
@@ -6,6 +7,7 @@ from django.conf import settings
 from .models import Wallet, Transaction
 from .paystack import PaystackAPI
 import uuid
+from decimal import Decimal  # Import Decimal
 
 @login_required
 def fund_wallet(request):
@@ -46,10 +48,10 @@ def payment_callback(request):
     if response.get("status") and response["data"]["status"] == "success":
         transaction = Transaction.objects.get(reference=reference)
         if transaction.status == "pending":
-            amount = response["data"]["amount"] / 100  # Convert from kobo
+            amount = Decimal(response["data"]["amount"] / 100)  # Convert float to Decimal
             transaction.status = "completed"
             transaction.save()
-            transaction.wallet.balance += amount
+            transaction.wallet.balance += amount  # Now both are Decimal
             transaction.wallet.save()
             return render(request, "wallet/success.html")
     return render(request, "wallet/failure.html")
@@ -66,10 +68,10 @@ def paystack_webhook(request):
             try:
                 transaction = Transaction.objects.get(reference=reference)
                 if transaction.status == "pending":
-                    amount = payload["data"]["amount"] / 100
+                    amount = Decimal(payload["data"]["amount"] / 100)  # Convert float to Decimal
                     transaction.status = "completed"
                     transaction.save()
-                    transaction.wallet.balance += amount
+                    transaction.wallet.balance += amount  # Now both are Decimal
                     transaction.wallet.save()
             except Transaction.DoesNotExist:
                 pass

@@ -1,0 +1,47 @@
+{% extends "layout/public/layout.html" %} 
+{% block content %}
+<div class="max-w-4xl mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Wallet Dashboard</h2>
+
+    <!-- Wallet Balance -->
+    <div class="mb-6 p-4 bg-gray-100 rounded-md">
+        <p class="text-lg">Balance: <span class="font-semibold">{{ wallet.balance }} {{ wallet.currency }}</span></p>
+        <a href="{% url 'wallet:fund_wallet' %}" class="mt-2 inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Fund Wallet</a>
+    </div>
+
+    <!-- Transaction History -->
+    <h3 class="text-xl font-semibold mb-4">Transaction History</h3>
+    {% if transactions %}
+        <div class="overflow-x-auto">
+            <table class="min-w-full bg-white border">
+                <thead>
+                    <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                        <th class="py-3 px-6 text-left">Date</th>
+                        <th class="py-3 px-6 text-left">Type</th>
+                        <th class="py-3 px-6 text-right">Amount</th>
+                        <th class="py-3 px-6 text-left">Reference</th>
+                        <th class="py-3 px-6 text-left">Status</th>
+                        <th class="py-3 px-6 text-center">Receipt</th>
+                    </tr>
+                </thead>
+                <tbody class="text-gray-600 text-sm">
+                    {% for transaction in transactions %}
+                    <tr class="border-b border-gray-200 hover:bg-gray-100">
+                        <td class="py-3 px-6 text-left">{{ transaction.created_at|date:"Y-m-d H:i" }}</td>
+                        <td class="py-3 px-6 text-left">{{ transaction.transaction_type }}</td>
+                        <td class="py-3 px-6 text-right">{{ transaction.amount }} {{ wallet.currency }}</td>
+                        <td class="py-3 px-6 text-left">{{ transaction.reference }}</td>
+                        <td class="py-3 px-6 text-left">{{ transaction.status }}</td>
+                        <td class="py-3 px-6 text-center">
+                            <a href="{% url 'wallet:generate_receipt' transaction.id %}" class="text-indigo-600 hover:underline">Download Receipt</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    {% else %}
+        <p class="text-gray-500">No transactions yet.</p>
+    {% endif %}
+</div>
+{% endblock %}

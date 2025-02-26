@@ -6,5 +6,6 @@ urlpatterns = [
     path("fund/", views.fund_wallet, name="fund_wallet"),
     path("callback/", views.payment_callback, name="payment_callback"),
     path("webhook/", views.paystack_webhook, name="paystack_webhook"),
-    path("balance/", views.wallet_balance, name="wallet_balance"),
+    path("dashboard/", views.wallet_dashboard, name="wallet_dashboard"),  # Dashboard
+    path("receipt/<int:transaction_id>/", views.generate_receipt, name="generate_receipt"),  # Receipt
 ]

@@ -9,7 +9,7 @@ const app = express()
 
 // Use FRONTEND_URL from environment variables, fallback to localhost:3000 for local dev
 const FRONTEND_URL =
-  process.env.FRONTEND_URL || 'https://cdc-wallet.vercel.app'
+  process.env.FRONTEND_URL || 'https://localhost:3000'
 
 // CORS configuration
 const corsOptions = {

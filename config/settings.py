@@ -41,11 +41,16 @@ INSTALLED_APPS = [
     "app",
     "users",
     
+    "rest_framework",
     "allauth",
     "allauth.account",
     "crispy_forms",
     "crispy_tailwind",
 ]
+
+
+PAYSTACK_SECRET_KEY = "sk_test_95590a5267c621c2d497b589a0452dc9c118fe62"
+PAYSTACK_PUBLIC_KEY = "pk_test_30e822d552042462177b2425ee53cb310abe6bbe"
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

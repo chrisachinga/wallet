@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.1/ref/settings/
 """
 import os
 from pathlib import Path
-from decouple import config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -21,12 +20,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config(
-    'SECRET_KEY', 
-    default='django-insecure-9g4_@r*l&bw(ngafy$%q4u@zvm(t))-i-f^99h@kk3i6zuo(+s'
-    )
+SECRET_KEY = 'django-insecure-9g4_@r*l&bw(ngafy$%q4u@zvm(t))-i-f^99h@kk3i6zuo(+s'
+
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
@@ -43,18 +40,14 @@ INSTALLED_APPS = [
     
     "app",
     "users",
-    "wallet",
     
     "allauth",
     "allauth.account",
     "crispy_forms",
     "crispy_tailwind",
-    "rest_framework",
-    "corsheaders",
 ]
 
 MIDDLEWARE = [
-    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',

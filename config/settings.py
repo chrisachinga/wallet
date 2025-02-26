@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     
     "app",
     "users",
+    "wallet",
     
     "rest_framework",
     "allauth",

@@ -1,0 +1,14 @@
+{% extends "layout/public/layout.html" %} 
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Fund Your Wallet</h2>
+    <form method="POST" class="space-y-4">
+        {% csrf_token %}
+        <div>
+            <label for="amount" class="block text-sm font-medium text-gray-700">Amount (KES)</label>
+            <input type="number" id="amount" name="amount" step="0.01" min="1" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" required>
+        </div>
+        <button type="submit" class="w-full bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Fund Wallet</button>
+    </form>
+</div>
+{% endblock %}

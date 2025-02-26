@@ -1,0 +1,8 @@
+{% extends "layout/public/layout.html" %} 
+{% block content %}
+<div class="max-w-md mx-auto bg-white p-6 rounded-lg shadow-md">
+    <h2 class="text-2xl font-bold mb-4">Wallet Balance</h2>
+    <p class="text-lg">Balance: <span class="font-semibold">{{ wallet.balance }} {{ wallet.currency }}</span></p>
+    <a href="{% url 'fund_wallet' %}" class="mt-4 inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Fund Wallet</a>
+</div>
+{% endblock %}

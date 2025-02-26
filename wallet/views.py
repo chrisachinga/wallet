@@ -89,6 +89,25 @@ def wallet_dashboard(request):
     return render(request, "wallet/dashboard.html", context)
 
 @login_required
+def preview_receipt(request, transaction_id):
+    try:
+        transaction = Transaction.objects.get(id=transaction_id, wallet=request.user.wallet)
+    except Transaction.DoesNotExist:
+        return JsonResponse({"error": "Transaction not found"}, status=404)
+
+    # Receipt data for preview
+    receipt_data = {
+        "user_email": request.user.email,
+        "type": transaction.transaction_type,
+        "amount": str(transaction.amount),
+        "currency": transaction.wallet.currency,
+        "reference": transaction.reference,
+        "status": transaction.status,
+        "date": transaction.created_at.strftime('%Y-%m-%d %H:%M:%S'),
+    }
+    return JsonResponse(receipt_data)
+
+@login_required
 def generate_receipt(request, transaction_id):
     try:
         transaction = Transaction.objects.get(id=transaction_id, wallet=request.user.wallet)
@@ -101,7 +120,6 @@ def generate_receipt(request, transaction_id):
     styles = getSampleStyleSheet()
     elements = []
 
-    # Receipt content
     elements.append(Paragraph("Transaction Receipt", styles['Heading1']))
     elements.append(Spacer(1, 12))
     elements.append(Paragraph(f"User: {request.user.email}", styles['Normal']))
@@ -115,7 +133,6 @@ def generate_receipt(request, transaction_id):
     pdf = buffer.getvalue()
     buffer.close()
 
-    # Return PDF as response
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="receipt_{transaction.reference}.pdf"'
     return response

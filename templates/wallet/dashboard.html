@@ -6,7 +6,10 @@
     <!-- Wallet Balance -->
     <div class="mb-6 p-4 bg-gray-100 rounded-md">
         <p class="text-lg">Balance: <span class="font-semibold">{{ wallet.balance }} {{ wallet.currency }}</span></p>
-        <a href="{% url 'wallet:fund_wallet' %}" class="mt-2 inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Fund Wallet</a>
+        <div class="mt-2 space-x-4">
+            <a href="{% url 'wallet:fund_wallet' %}" class="inline-block bg-indigo-600 text-white py-2 px-4 rounded-md hover:bg-indigo-700">Fund Wallet</a>
+            <button onclick="showStatementPreview()" class="inline-block bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700">Preview Statement</button>
+        </div>
     </div>
 
     <!-- Transaction History -->
@@ -53,7 +56,24 @@
             <div id="receipt-content" class="mt-2 px-7 py-3 text-left text-sm text-gray-600"></div>
             <div class="items-center px-4 py-3">
                 <button id="download-receipt" class="px-4 py-2 bg-indigo-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-indigo-700">Download PDF</button>
-                <button onclick="closeModal()" class="mt-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300">Close</button>
+                <button onclick="closeModal('receipt-modal')" class="mt-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statement Preview Modal -->
+<div id="statement-modal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden">
+    <div class="relative top-20 mx-auto p-5 border w-4/5 max-w-4xl shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <h3 class="text-lg leading-6 font-medium text-gray-900 text-center">Wallet Statement</h3>
+            <div id="statement-content" class="mt-2 px-7 py-3 text-sm text-gray-600">
+                <div id="statement-header" class="mb-4"></div>
+                <div id="statement-table" class="overflow-x-auto"></div>
+            </div>
+            <div class="items-center px-4 py-3">
+                <button id="download-statement" class="px-4 py-2 bg-green-600 text-white text-base font-medium rounded-md w-full shadow-sm hover:bg-green-700">Download PDF</button>
+                <button onclick="closeModal('statement-modal')" class="mt-3 px-4 py-2 bg-gray-200 text-gray-800 text-base font-medium rounded-md w-full shadow-sm hover:bg-gray-300">Close</button>
             </div>
         </div>
     </div>
@@ -64,7 +84,7 @@ function showReceiptPreview(transactionId) {
     fetch(`/wallet/preview/${transactionId}/`, {
         method: 'GET',
         headers: {
-            'X-Requested-With': 'XMLHttpRequest', // Indicate AJAX request
+            'X-Requested-With': 'XMLHttpRequest',
         }
     })
     .then(response => response.json())
@@ -93,8 +113,73 @@ function showReceiptPreview(transactionId) {
     });
 }
 
-function closeModal() {
-    document.getElementById('receipt-modal').classList.add('hidden');
+function showStatementPreview() {
+    fetch(`/wallet/statement/preview/`, {
+        method: 'GET',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        // Header
+        const header = `
+            <p><strong>User:</strong> ${data.user_email}</p>
+            <p><strong>Balance:</strong> ${data.balance} ${data.currency}</p>
+            <p><strong>Generated on:</strong> ${data.generated_on}</p>
+        `;
+        document.getElementById('statement-header').innerHTML = header;
+
+        // Table
+        let tableContent = '';
+        if (data.transactions.length > 0) {
+            tableContent = `
+                <table class="min-w-full bg-white border">
+                    <thead>
+                        <tr class="bg-gray-200 text-gray-600 uppercase text-sm leading-normal">
+                            <th class="py-3 px-6 text-left">Date</th>
+                            <th class="py-3 px-6 text-left">Type</th>
+                            <th class="py-3 px-6 text-right">Amount</th>
+                            <th class="py-3 px-6 text-left">Reference</th>
+                            <th class="py-3 px-6 text-left">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-gray-600 text-sm">
+            `;
+            data.transactions.forEach(tx => {
+                tableContent += `
+                    <tr class="border-b border-gray-200 hover:bg-gray-100">
+                        <td class="py-3 px-6 text-left">${tx.date}</td>
+                        <td class="py-3 px-6 text-left">${tx.type}</td>
+                        <td class="py-3 px-6 text-right">${tx.amount} ${data.currency}</td>
+                        <td class="py-3 px-6 text-left">${tx.reference}</td>
+                        <td class="py-3 px-6 text-left">${tx.status}</td>
+                    </tr>
+                `;
+            });
+            tableContent += `
+                    </tbody>
+                </table>
+            `;
+        } else {
+            tableContent = '<p class="text-gray-500">No transactions found.</p>';
+        }
+        document.getElementById('statement-table').innerHTML = tableContent;
+
+        // Set download button action
+        document.getElementById('download-statement').onclick = () => {
+            window.location.href = `/wallet/statement/`;
+        };
+        document.getElementById('statement-modal').classList.remove('hidden');
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Failed to load statement preview.');
+    });
+}
+
+function closeModal(modalId) {
+    document.getElementById(modalId).classList.add('hidden');
 }
 </script>
 {% endblock %}

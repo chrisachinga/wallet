@@ -3,12 +3,14 @@ from django.contrib.auth.decorators import login_required
 from django.http import JsonResponse, HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.conf import settings
+from django.utils import timezone
 from .models import Wallet, Transaction
 from .paystack import PaystackAPI
 import uuid
 from decimal import Decimal
 from reportlab.lib.pagesizes import letter
-from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table
+from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
 from io import BytesIO
 
@@ -95,7 +97,6 @@ def preview_receipt(request, transaction_id):
     except Transaction.DoesNotExist:
         return JsonResponse({"error": "Transaction not found"}, status=404)
 
-    # Receipt data for preview
     receipt_data = {
         "user_email": request.user.email,
         "type": transaction.transaction_type,
@@ -114,7 +115,6 @@ def generate_receipt(request, transaction_id):
     except Transaction.DoesNotExist:
         return HttpResponse("Transaction not found", status=404)
 
-    # Generate PDF receipt
     buffer = BytesIO()
     doc = SimpleDocTemplate(buffer, pagesize=letter)
     styles = getSampleStyleSheet()
@@ -135,4 +135,78 @@ def generate_receipt(request, transaction_id):
 
     response = HttpResponse(pdf, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="receipt_{transaction.reference}.pdf"'
+    return response
+
+@login_required
+def preview_statement(request):
+    wallet = request.user.wallet
+    transactions = Transaction.objects.filter(wallet=wallet).order_by('-created_at')
+
+    # Statement data for preview
+    statement_data = {
+        "user_email": request.user.email,
+        "balance": str(wallet.balance),
+        "currency": wallet.currency,
+        "generated_on": timezone.now().strftime('%Y-%m-%d %H:%M:%S'),
+        "transactions": [
+            {
+                "date": tx.created_at.strftime('%Y-%m-%d %H:%M'),
+                "type": tx.transaction_type,
+                "amount": str(tx.amount),
+                "reference": tx.reference,
+                "status": tx.status,
+            } for tx in transactions
+        ],
+    }
+    return JsonResponse(statement_data)
+
+@login_required
+def generate_statement(request):
+    wallet = request.user.wallet
+    transactions = Transaction.objects.filter(wallet=wallet).order_by('-created_at')
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    elements = []
+
+    elements.append(Paragraph("Wallet Statement", styles['Heading1']))
+    elements.append(Spacer(1, 12))
+    elements.append(Paragraph(f"User: {request.user.email}", styles['Normal']))
+    elements.append(Paragraph(f"Balance: {wallet.balance} {wallet.currency}", styles['Normal']))
+    elements.append(Paragraph(f"Generated on: {timezone.now().strftime('%Y-%m-%d %H:%M:%S')}", styles['Normal']))
+    elements.append(Spacer(1, 24))
+
+    if transactions.exists():
+        data = [["Date", "Type", "Amount", "Reference", "Status"]]
+        for tx in transactions:
+            data.append([
+                tx.created_at.strftime('%Y-%m-%d %H:%M'),
+                tx.transaction_type,
+                f"{tx.amount} {wallet.currency}",
+                tx.reference,
+                tx.status,
+            ])
+
+        table = Table(data)
+        table.setStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.grey),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, -1), 10),
+            ('GRID', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.beige),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ])
+        elements.append(table)
+    else:
+        elements.append(Paragraph("No transactions found.", styles['Normal']))
+
+    doc.build(elements)
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(pdf, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="statement_{request.user.email}_{timezone.now().strftime('%Y%m%d')}.pdf"'
     return response

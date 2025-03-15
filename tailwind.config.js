@@ -4,10 +4,6 @@ module.exports = {
     "./templates/**/*.html",
     "./**/templates/**/*.html",
   ],
-  theme: {
-    extend: {},
-  },
-  plugins: [
-    require('preline/plugin'),
-  ],
+  
+  plugins: [],
 };

@@ -1,65 +1,54 @@
 {% load static %}
-<footer
-  class="mt-auto border-t border-gray-200 md:border-t-0 dark:border-neutral-700"
->
+<footer class="mt-auto border-t border-gray-200 dark:border-neutral-700 bg-neutral-50 dark:bg-neutral-950 transition-colors duration-300">
   <div class="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 md:pt-0 lg:px-8">
-    <!-- Grid -->
     <div class="grid grid-cols-1 items-center gap-5 md:grid-cols-3">
-      <div class="text-center md:text-start">
-        <!-- Logo -->
+      <!-- Logo -->
+      <div class="text-center md:text-left">
         <img
           src="{% static 'branding/1.png' %}"
-          class="w-28"
+          class="w-28 mx-auto md:mx-0"
           alt="ChrisDevCode Logo"
           width="10"
           height="10"
         />
-        <!-- End Logo -->
       </div>
-      <!-- End Col -->
 
-      <ul class="text-center">
-        <li
-          class="relative inline-block pe-8 before:absolute before:end-3 before:top-1/2 before:-translate-y-1/2 before:text-black before:content-['/'] last:pe-0 last-of-type:before:hidden dark:before:text-white"
-        >
+      <!-- Navigation Links -->
+      <ul class="flex justify-center space-x-4">
+        <li class="relative">
           <a
-            class="inline-flex gap-x-2 text-sm text-black hover:text-gray-600 dark:text-white dark:hover:text-neutral-300"
+            class="inline-flex gap-x-2 text-sm text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 after:content-['/'] after:absolute after:right-2 after:top-1/2 after:-translate-y-1/2 after:text-gray-900 dark:after:text-gray-100"
             href="#"
           >
             About
           </a>
         </li>
-        <li
-          class="relative inline-block pe-8 before:absolute before:end-3 before:top-1/2 before:-translate-y-1/2 before:text-black before:content-['/'] last:pe-0 last-of-type:before:hidden dark:before:text-white"
-        >
+        <li class="relative">
           <a
-            class="inline-flex gap-x-2 text-sm text-black hover:text-gray-600 dark:text-white dark:hover:text-neutral-300"
+            class="inline-flex gap-x-2 text-sm text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 after:content-['/'] after:absolute after:right-2 after:top-1/2 after:-translate-y-1/2 after:text-gray-900 dark:after:text-gray-100"
             href="#"
           >
             Services
           </a>
         </li>
-        <li
-          class="relative inline-block pe-8 before:absolute before:end-3 before:top-1/2 before:-translate-y-1/2 before:text-black before:content-['/'] last:pe-0 last-of-type:before:hidden dark:before:text-white"
-        >
+        <li>
           <a
-            class="inline-flex gap-x-2 text-sm text-black hover:text-gray-600 dark:text-white dark:hover:text-neutral-300"
+            class="inline-flex gap-x-2 text-sm text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300"
             href="#"
           >
             Blog
           </a>
         </li>
       </ul>
-      <!-- End Col -->
 
-      <!-- Social Brands -->
-      <div class="space-x-2 text-center md:text-end">
+      <!-- Social Icons -->
+      <div class="flex justify-center space-x-2 md:justify-end">
         <a
-          class="inline-flex size-8 items-center justify-center gap-x-2 rounded-full border border-transparent text-sm font-semibold text-black hover:text-gray-600 disabled:pointer-events-none disabled:opacity-50 dark:text-white dark:hover:text-neutral-400"
+          class="inline-flex size-8 items-center justify-center rounded-full border border-transparent text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           href="#"
         >
           <svg
-            class="size-3.5 flex-shrink-0"
+            class="size-3.5"
             xmlns="http://www.w3.org/2000/svg"
             width="16"
             height="16"
@@ -72,11 +61,11 @@
           </svg>
         </a>
         <a
-          class="inline-flex size-8 items-center justify-center gap-x-2 rounded-full border border-transparent text-sm font-semibold text-black hover:text-gray-600 disabled:pointer-events-none disabled:opacity-50 dark:text-white dark:hover:text-neutral-400"
+          class="inline-flex size-8 items-center justify-center rounded-full border border-transparent text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           href="#"
         >
           <svg
-            class="size-3.5 flex-shrink-0"
+            class="size-3.5"
             xmlns="http://www.w3.org/2000/svg"
             width="16"
             height="16"
@@ -89,11 +78,11 @@
           </svg>
         </a>
         <a
-          class="inline-flex size-8 items-center justify-center gap-x-2 rounded-full border border-transparent text-sm font-semibold text-black hover:text-gray-600 disabled:pointer-events-none disabled:opacity-50 dark:text-white dark:hover:text-neutral-400"
+          class="inline-flex size-8 items-center justify-center rounded-full border border-transparent text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           href="#"
         >
           <svg
-            class="size-3.5 flex-shrink-0"
+            class="size-3.5"
             xmlns="http://www.w3.org/2000/svg"
             width="16"
             height="16"
@@ -106,11 +95,11 @@
           </svg>
         </a>
         <a
-          class="inline-flex size-8 items-center justify-center gap-x-2 rounded-full border border-transparent text-sm font-semibold text-black hover:text-gray-600 disabled:pointer-events-none disabled:opacity-50 dark:text-white dark:hover:text-neutral-400"
+          class="inline-flex size-8 items-center justify-center rounded-full border border-transparent text-gray-900 dark:text-gray-100 hover:text-gray-700 dark:hover:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
           href="#"
         >
           <svg
-            class="size-3.5 flex-shrink-0"
+            class="size-3.5"
             xmlns="http://www.w3.org/2000/svg"
             width="16"
             height="16"
@@ -123,8 +112,6 @@
           </svg>
         </a>
       </div>
-      <!-- End Social Brands -->
     </div>
-    <!-- End Grid -->
   </div>
 </footer>

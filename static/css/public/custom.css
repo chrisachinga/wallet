@@ -1,3 +1,12 @@
 main {
     min-height: 80vh;
 }
+
+/* static/css/public/custom.css */
+header, footer {
+    @apply transition-colors duration-300;
+  }
+  
+  .dark a:hover {
+    @apply text-gray-300;
+  }
